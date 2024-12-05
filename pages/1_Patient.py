@@ -11,13 +11,13 @@ for message in st.session_state.p_chat_history:
         st.markdown(message["content"])
 
 # Chat logic
-if prompt := st.chat_input("Write a response here", disabled = st.session_state.response_counter >= 10):
+if prompt := st.chat_input("Write a response here", disabled = st.session_state.response_counter >= 1000):
 
     st.session_state["part_1_done"] = True
 
     st.session_state.p_chat_history.append({"role": "user", "content": prompt})
 
-    if st.session_state.response_counter < 10:
+    if st.session_state.response_counter < 1000:
     
         with st.chat_message("user"):
             st.markdown(prompt)
