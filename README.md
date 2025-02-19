@@ -1,6 +1,103 @@
-# Physiotherapy Bot
+# Simple Setup Guide for Physiotherapy Bot
 
-An interactive learning platform for physiotherapy students to practice patient assessments and receive supervisor feedback using AI.
+## Before You Start
+
+You'll need:
+- A list of your students (in Excel or CSV format)
+- MongoDB Atlas account (free tier works fine)
+- OpenAI API key
+- Python installed on your computer
+
+## Step-by-Step Setup
+
+### 1. First-Time Setup
+
+1. **Download the Project**
+   - Download the physiotherapy bot project files to your computer
+   - Open your command prompt or terminal
+   - Navigate to the project folder
+
+2. **Set Up Your Database (One-Time Setup)**
+   - Go to MongoDB Atlas website (mongodb.com)
+   - Create a free account
+   - Create a new cluster (the free tier is fine)
+   - Click "Connect" and choose "Connect your application"
+   - Copy the connection string (it looks like: `mongodb+srv://...`)
+   - Save this string for later
+
+3. **Get Your OpenAI Key (One-Time Setup)**
+   - Go to platform.openai.com
+   - Create an account
+   - Click on your profile → View API keys
+   - Create a new key
+   - Copy and save this key
+
+4. **Configure the Project**
+   - In the project folder, find the file called `.env`
+   - Replace the example values with your own:
+     ```
+     OPENAI_API_KEY=your_key_here
+     MONGODB_CONNECTION_STRING=your_mongodb_string_here
+     ```
+
+### 2. Setting Up Student Access
+
+1. **Prepare Your Student List**
+   - Open Excel
+   - Create a new file with these columns:
+     - student_id
+     - email
+     - name
+   - Save it as CSV (File → Save As → CSV)
+   - Remember where you saved it
+
+2. **Generate Student Identifiers**
+   - In your terminal/command prompt (in the project folder):
+   ```
+   python scripts/generate_and_load_identifiers.py
+   ```
+   - When asked, provide the path to your CSV file
+   - The script will create a new file with student identifiers
+   - Share these identifiers with your students
+
+### 3. Running the Application
+
+1. **Start the Application**
+   ```
+   streamlit run Home.py
+   ```
+   - This will open the application in your web browser
+   - Share the URL with your students
+
+2. **Student Access**
+   - Students use their assigned identifier to log in
+   - They can then:
+     1. Chat with the AI patient
+     2. Get feedback from the AI supervisor
+
+### 4. Viewing Results
+
+- All conversations are automatically saved in your MongoDB database
+- Each conversation is linked to the student's identifier
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Invalid Identifier" Error**
+   - Check that the student is using the correct identifier
+   - Try generating new identifiers if needed
+
+2. **Application Won't Start**
+   - Make sure all the setup steps were completed
+   - Check your internet connection
+   - Verify your OpenAI API key hasn't expired
+
+3. **Conversation Not Saving**
+   - Check your internet connection
+   - Make sure students click "Finish Conversation" when done
+
+Need help? Contact technical support at [your contact information]
 
 ## Overview
 
@@ -157,4 +254,4 @@ physiobot/
 
 ## License
 
-[Insert your license information here]
+This repository is available for public use
