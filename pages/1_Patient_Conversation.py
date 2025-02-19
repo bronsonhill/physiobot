@@ -1,6 +1,10 @@
-import streamlit as st 
+import streamlit as st
 from Home import setup
 from utils.mongodb import log_transcript
+
+if not bool(st.session_state.get("user_identifier", "").strip()):
+    st.error("Please enter your identifier on the Home page before starting the conversation.")
+    st.stop()
 
 MAXIMUM_RESPONSES = 1000
 
