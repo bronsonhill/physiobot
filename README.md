@@ -1,14 +1,19 @@
 # Physiotherapy Bot
 
-An interactive learning tool for physiotherapy students to practice patient consultations and receive expert feedback.
+An interactive learning platform for physiotherapy students to practice patient assessments and receive supervisor feedback using AI.
 
 ## Overview
 
-This application provides a simulated environment for physiotherapy students to:
-1. Conduct mock patient interviews (Activity 1)
-2. Receive detailed feedback from an AI supervisor (Activity 2)
+This application consists of two main components:
+1. A simulated patient conversation where students can practice their subjective assessment skills
+2. A simulated supervisor conversation where students receive feedback on their patient interaction
 
-The system uses AI to simulate both a patient with specific conditions and a supervisor who evaluates the student's communication skills and assessment techniques.
+### How It Works
+
+1. Students log in using their unique identifier
+2. They conduct a subjective assessment with an AI patient
+3. After completing the patient conversation, they can discuss their performance with an AI supervisor
+4. All conversations are saved to MongoDB for review
 
 ## Features
 
@@ -21,22 +26,64 @@ The system uses AI to simulate both a patient with specific conditions and a sup
   - Clarification techniques
   - Professional tone and language
 
-## Setup
+## Setup Instructions
 
-1. Install dependencies:
+### 1. Environment Setup
+
+1. Clone the repository
+2. Create a virtual environment:
 ```bash
-pip install streamlit openai
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+3. Install requirements:
+```bash
+pip install -r requirements.txt
 ```
 
-2. Set up your OpenAI API key in your environment variables:
-```bash
-export OPENAI_API_KEY='your-api-key-here'
+### 2. Configuration
+
+1. Create a `.env` file in the project root with the following:
+```properties
+OPENAI_API_KEY=your_openai_api_key
+MONGODB_USERNAME=your_mongodb_username
+MONGODB_PASSWORD=your_mongodb_password
+MONGODB_CONNECTION_STRING=your_mongodb_connection_string
 ```
 
-3. Run the application:
+2. Create a `.streamlit/secrets.toml` file:
+```toml
+OPENAI_API_KEY="your_openai_api_key"
+MONGODB_CONNECTION_STRING="your_mongodb_connection_string"
+```
+
+### 3. Setting Up Student Identifiers
+
+1. Create a CSV file with student information (e.g., `students.csv`):
+```csv
+student_id,email,name
+12345,student1@example.com,John Doe
+12346,student2@example.com,Jane Smith
+```
+
+2. Generate identifiers and load them into MongoDB:
+```bash
+python scripts/generate_and_load_identifiers.py
+```
+
+3. The script will:
+   - Generate unique identifiers for each student
+   - Save a new CSV with the mappings (keep this secure!)
+   - Upload only the identifiers to MongoDB
+
+### 4. Running the Application
+
+1. Start the Streamlit app:
 ```bash
 streamlit run Home.py
 ```
+
+2. Access the application at `http://localhost:8501`
 
 ## Usage
 
@@ -62,6 +109,52 @@ The system evaluates students based on the WOCCSNOR framework:
 - Other symptoms
 - Referral
 
+## Project Structure
+
+```
+physiobot/
+├── Home.py                 # Main application entry point
+├── pages/
+│   ├── 1_Patient_Conversation.py    # Patient simulation
+│   └── 2_Supervisor_Conversation.py # Supervisor feedback
+├── utils/
+│   └── mongodb.py         # Database utilities
+├── scripts/
+│   └── generate_and_load_identifiers.py # Identifier management
+└── prompts/
+    ├── pprompt.txt       # Patient conversation prompt
+    └── supervisorprompt.txt # Supervisor conversation prompt
+```
+
+## Security Considerations
+
+1. Never commit `.env` or `secrets.toml` files
+2. Keep the CSV with student-identifier mappings secure
+3. Only identifiers are stored in MongoDB, no personal information
+4. Regular database backups are recommended
+
+## Troubleshooting
+
+1. Invalid Identifier:
+   - Ensure the identifier was generated using the provided script
+   - Check MongoDB connection
+   - Verify the identifier in the valid_identifiers collection
+
+2. Connection Issues:
+   - Verify MongoDB connection string
+   - Check internet connection
+   - Ensure OpenAI API key is valid
+
+3. Missing Conversations:
+   - Check MongoDB connection
+   - Verify the conversation was properly finished using the "Finish Conversation" button
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
 ## License
 
-This project is for educational purposes. Please ensure you have appropriate licenses for any AI models used.
+[Insert your license information here]
