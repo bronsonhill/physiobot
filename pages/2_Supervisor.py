@@ -13,7 +13,7 @@ if not st.session_state["part_1_done"]:
 p_messages = st.session_state["p_chat_history"]
 formatted_messages = "\n".join([f"{message['role'].capitalize()}: {message['content']}" for message in p_messages])
 
-systemprompt = f"{st.session_state["supervisor_prompt"]} \n\n {formatted_messages}"
+systemprompt = f"{st.session_state['supervisor_prompt']} \n\n {formatted_messages}"
 
 # Write chat history
 for message in st.session_state.s_chat_history:

@@ -2,7 +2,7 @@ import streamlit as st
 from openai import OpenAI
 
 st.title("Homepage")
-st.write("Welcome! For this activity, you will interact with a chatbot roleplaying as a patient." \
+st.write("Welcome! For this activity, you will interact with a chatbot roleplaying as a patient. " \
           "The aim is to practice the subjective assessment framework and the communication skills required to establish therapeutic rapport and support patients.")
 
 def setup():
