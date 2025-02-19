@@ -67,7 +67,7 @@ You'll need:
    streamlit run Home.py
    ```
    - This will open the application in your web browser
-   - Share the URL with your students
+   - Click deploy and set the appropriate secret variables
 
 2. **Student Access**
    - Students use their assigned identifier to log in
