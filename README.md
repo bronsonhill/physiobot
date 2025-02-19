@@ -99,7 +99,7 @@ You'll need:
 
 Need help? Contact technical support at [your contact information]
 
-## Overview
+# Physiotherapy Bot Overview
 
 This application consists of two main components:
 1. A simulated patient conversation where students can practice their subjective assessment skills
@@ -254,4 +254,4 @@ physiobot/
 
 ## License
 
-This repository is available for public use
+This repository is available for unlimited public use
