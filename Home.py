@@ -61,6 +61,7 @@ def setup():
     return client
 
 def init_page():
+    setup()
     st.title("Homepage")
     st.markdown(
         "Welcome! For this activity, you will interact with a chatbot roleplaying as a patient. " \
