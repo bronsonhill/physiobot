@@ -11,7 +11,7 @@ def is_identifier_valid():
 def setup():
 
     if "patient_prompt" not in st.session_state: 
-        with open("./prompts/pprompt.txt", "r") as file:
+        with open("./prompts/prompt.txt", "r") as file:
             patientprompt = file.read()
 
         st.session_state["patient_prompt"] = patientprompt

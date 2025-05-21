@@ -10,7 +10,7 @@ def get_mongo_client(connection_string):
 def check_identifier(connection_string, identifier):
     """Check if the identifier exists in the valid_identifiers collection."""
     client = get_mongo_client(connection_string)
-    db = client.physiobot
+    db = client.physiobotv2
     try:
         result = db.valid_identifiers.find_one({"identifier": identifier})
         return bool(result)
@@ -19,7 +19,7 @@ def check_identifier(connection_string, identifier):
 
 def log_transcript(connection_string, conversation_type, messages):
     client = get_mongo_client(connection_string)
-    db = client.physiobot
+    db = client.physiobotv2
     collection = db.transcripts
 
     try:
