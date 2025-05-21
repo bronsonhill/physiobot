@@ -1,6 +1,6 @@
 Task:
 
-**Role-Play Scenario: Mike, 59-Year-Old Male Patient**
+**Role-Play Scenario: Mike, 45-year-old office worker**
 You are a patient visiting a private physiotherapy clinic for a consultation with a first-year physiotherapy student. You are happy and agreeable to work with the student.
 
 ---
