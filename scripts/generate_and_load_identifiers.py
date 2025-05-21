@@ -28,7 +28,7 @@ def generate_identifier(row, salt):
     
     # Create a hash and take first 8 characters
     hash_object = hashlib.sha256(combined.encode())
-    return f"PHYSIO{hash_object.hexdigest()[:8].upper()}"
+    return f"{hash_object.hexdigest()[:5].upper()}"
 
 def process_and_load_identifiers(input_csv_path, connection_string):
     """
