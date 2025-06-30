@@ -73,6 +73,8 @@ def get_js_code():
             const statusDiv = document.getElementById('status');
             const errorDiv = document.getElementById('error');
             const chatContainer = document.getElementById('chat-container');
+            const chatContent = document.getElementById('chat-content');
+            const emptyState = document.getElementById('empty-state');
 
             let peerConnection = null;
             let audioStream = null;
@@ -127,7 +129,10 @@ def get_js_code():
             function updateScrollIndicator() {{
                 const indicator = document.getElementById('scroll-indicator');
                 if (indicator) {{
-                    if (!autoScrollEnabled && chatContainer.children.length > 1) {{
+                    // Show indicator if user has scrolled up and there are messages
+                    const hasMessages = chatContent.children.length > 1 || 
+                                      (chatContent.children.length === 1 && emptyState && emptyState.style.display === 'none');
+                    if (!autoScrollEnabled && hasMessages) {{
                         indicator.style.display = 'block';
                     }} else {{
                         indicator.style.display = 'none';
@@ -277,6 +282,11 @@ def get_js_code():
             let currentUserMessage = null;
 
             function createUserMessageContainer() {{
+                // Hide empty state if it's visible
+                if (emptyState) {{
+                    emptyState.style.display = 'none';
+                }}
+                
                 currentUserMessage = document.createElement('div');
                 currentUserMessage.className = 'message user-message';
 
@@ -290,7 +300,7 @@ def get_js_code():
 
                 currentUserMessage.appendChild(label);
                 currentUserMessage.appendChild(content);
-                chatContainer.appendChild(currentUserMessage);
+                chatContent.appendChild(currentUserMessage);
                 smartScrollToBottom();
             }}
 
@@ -320,6 +330,11 @@ def get_js_code():
                 if (message.response?.output?.[0]?.content?.[0]?.transcript) {{
                     const transcript = message.response.output[0].content[0].transcript;
 
+                    // Hide empty state if it's visible
+                    if (emptyState) {{
+                        emptyState.style.display = 'none';
+                    }}
+
                     const botMessage = document.createElement('div');
                     botMessage.className = 'message bot-message';
 
@@ -333,7 +348,7 @@ def get_js_code():
 
                     botMessage.appendChild(label);
                     botMessage.appendChild(content);
-                    chatContainer.appendChild(botMessage);
+                    chatContent.appendChild(botMessage);
                     smartScrollToBottom();
                     
                     // Add to conversation segments
@@ -461,38 +476,47 @@ def get_webrtc_html():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Patient Conversation</title>
-                 <style>
-             .container {{
-                 max-width: 1000px;
-                 margin: 0 auto;
-                 padding: 20px;
-                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-             }}
-             .controls {{
-                 text-align: center;
-                 margin: 20px 0;
-                 padding: 20px;
-                 background-color: #f8f9fa;
-                 border-radius: 10px;
-             }}
-             .chat-container {{
-                 margin: 20px 0;
-                 padding: 20px;
-                 border: 2px solid #ddd;
-                 border-radius: 10px;
-                 min-height: 400px;
-                 max-height: 600px;
-                 overflow-y: auto;
-                 background-color: #ffffff;
-                 scroll-behavior: smooth;
-                 position: relative;
-             }}
-            .message {{
-                margin: 15px 0;
+        <style>
+            .container {{
+                max-width: 1000px;
+                margin: 0 auto;
+                padding: 20px;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            }}
+            .controls {{
+                text-align: center;
+                margin: 20px 0;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 10px;
+            }}
+            .chat-container {{
+                margin: 20px 0;
+                padding: 0;
+                border: 2px solid #ddd;
+                border-radius: 10px;
+                height: 500px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                background-color: #ffffff;
+                scroll-behavior: smooth;
+                position: relative;
+                box-sizing: border-box;
+            }}
+            .chat-content {{
                 padding: 15px;
+                min-height: 100%;
+                display: flex;
+                flex-direction: column;
+            }}
+            .message {{
+                margin: 8px 0;
+                padding: 12px 15px;
                 border-radius: 10px;
                 max-width: 85%;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }}
             .user-message {{
                 background-color: #e3f2fd;
@@ -507,14 +531,24 @@ def get_webrtc_html():
                 border-left: 4px solid #9C27B0;
             }}
             .message-label {{
-                font-size: 0.9em;
+                font-size: 0.85em;
                 color: #666;
-                margin-bottom: 8px;
+                margin-bottom: 6px;
                 font-weight: bold;
             }}
             .message-content {{
                 font-size: 1em;
-                line-height: 1.5;
+                line-height: 1.4;
+            }}
+            .empty-state {{
+                text-align: center;
+                color: #666;
+                font-style: italic;
+                margin-top: 150px;
+                flex-grow: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }}
             .status {{
                 text-align: center;
@@ -581,48 +615,48 @@ def get_webrtc_html():
                 margin-top: 0;
                 color: #856404;
             }}
-                         .instructions ul {{
-                 margin: 10px 0;
-                 padding-left: 20px;
-             }}
-             .instructions li {{
-                 margin: 5px 0;
-             }}
-             .scroll-indicator {{
-                 position: relative;
-                 text-align: center;
-                 margin: -10px 0 10px 0;
-                 display: none;
-                 z-index: 10;
-             }}
-             .scroll-to-bottom-btn {{
-                 background: linear-gradient(135deg, #4CAF50, #45a049);
-                 color: white;
-                 border: none;
-                 padding: 8px 16px;
-                 border-radius: 20px;
-                 font-size: 0.9em;
-                 cursor: pointer;
-                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                 transition: all 0.3s ease;
-                 animation: bounce 2s infinite;
-             }}
-             .scroll-to-bottom-btn:hover {{
-                 background: linear-gradient(135deg, #45a049, #4CAF50);
-                 box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                 transform: translateY(-1px);
-             }}
-             @keyframes bounce {{
-                 0%, 20%, 50%, 80%, 100% {{
-                     transform: translateY(0);
-                 }}
-                 40% {{
-                     transform: translateY(-3px);
-                 }}
-                 60% {{
-                     transform: translateY(-2px);
-                 }}
-             }}
+            .instructions ul {{
+                margin: 10px 0;
+                padding-left: 20px;
+            }}
+            .instructions li {{
+                margin: 5px 0;
+            }}
+            .scroll-indicator {{
+                position: relative;
+                text-align: center;
+                margin: -10px 0 10px 0;
+                display: none;
+                z-index: 10;
+            }}
+            .scroll-to-bottom-btn {{
+                background: linear-gradient(135deg, #4CAF50, #45a049);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 0.9em;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+                animation: bounce 2s infinite;
+            }}
+            .scroll-to-bottom-btn:hover {{
+                background: linear-gradient(135deg, #45a049, #4CAF50);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                transform: translateY(-1px);
+            }}
+            @keyframes bounce {{
+                0%, 20%, 50%, 80%, 100% {{
+                    transform: translateY(0);
+                }}
+                40% {{
+                    transform: translateY(-3px);
+                }}
+                60% {{
+                    transform: translateY(-2px);
+                }}
+            }}
         </style>
     </head>
     <body>
@@ -641,7 +675,7 @@ def get_webrtc_html():
             
             <div class="controls">
                 <button id="startButton" class="start-btn">🎙️ Start Conversation</button>
-                <button id="stopButton" class="stop-btn" disabled>⏹️ Pause Conversation</button>
+                <button id="stopButton" class="stop-btn" disabled>⏹️ Stop Conversation</button>
                 <button id="finishButton" class="finish-btn" disabled>✅ Finish & Save</button>
             </div>
             
@@ -649,8 +683,10 @@ def get_webrtc_html():
             <div id="error" class="error"></div>
             
             <div id="chat-container" class="chat-container">
-                <div style="text-align: center; color: #666; font-style: italic; margin-top: 100px;">
-                    Your conversation transcript will appear here...
+                <div class="chat-content" id="chat-content">
+                    <div class="empty-state" id="empty-state">
+                        Your conversation transcript will appear here...
+                    </div>
                 </div>
             </div>
             
