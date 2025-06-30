@@ -4,6 +4,8 @@
 
 This development plan outlines the transition of the physiobot platform from a text-based chat interface to a realtime audio conversation system using OpenAI's Realtime Audio API. The project maintains the core educational framework while introducing voice interaction capabilities for a more realistic patient-practitioner simulation experience.
 
+**Updated Scope**: The platform is designed to support multiple cohorts simultaneously with proper data isolation and administrative controls.
+
 ## Current Architecture Analysis
 
 ### Existing Components
@@ -497,3 +499,367 @@ This development plan provides a structured approach to transitioning the physio
 The plan emphasizes maintaining the existing educational framework while enhancing the user experience through more realistic audio-based patient interactions. The configuration system ensures flexibility for different use cases and technical environments.
 
 Regular milestone reviews and stakeholder feedback sessions should be scheduled throughout the development process to ensure alignment with educational objectives and technical requirements.
+
+## Multi-Cohort Support Architecture
+
+### Overview
+The platform will support multiple cohorts simultaneously, each with:
+- Isolated student data and transcripts
+- Configurable audio and conversation settings per cohort
+- Separate instructor/administrator access controls
+- Academic year and semester management
+- Bulk student management tools
+
+### Enhanced Database Schema
+
+#### Cohorts Collection
+```json
+{
+  "_id": ObjectId,
+  "cohort_id": String,        // e.g., "PHYSIO2024_SEM1"
+  "cohort_name": String,      // e.g., "First Year Physiotherapy 2024"
+  "academic_year": String,    // e.g., "2024"
+  "semester": String,         // e.g., "Semester 1"
+  "instructor_emails": Array, // ["instructor1@uni.edu", "instructor2@uni.edu"]
+  "created_at": DateTime,
+  "is_active": Boolean,
+  "settings": {
+    "audio_settings": {
+      "voice_type": String,
+      "speech_speed": Number,
+      "conversation_detection": Object
+    },
+    "conversation_settings": {
+      "max_duration": Number,
+      "max_responses": Number
+    },
+    "assignment_settings": {
+      "patient_prompt_override": String,     // Optional custom prompt
+      "supervisor_prompt_override": String,  // Optional custom prompt
+      "due_date": DateTime,
+      "instructions": String
+    }
+  }
+}
+```
+
+#### Updated Valid Identifiers Collection
+```json
+{
+  "_id": ObjectId,
+  "identifier": String,
+  "cohort_id": String,        // Links to cohorts collection
+  "student_metadata": {
+    "student_id": String,     // University student ID (hashed)
+    "year_level": String,     // "Year 1", "Year 2", etc.
+    "program": String         // "Physiotherapy", "Occupational Therapy"
+  },
+  "created_at": DateTime,
+  "is_active": Boolean,
+  "assignment_attempts": Number,
+  "last_access": DateTime
+}
+```
+
+#### Updated Audio Transcripts Collection
+```json
+{
+  "_id": ObjectId,
+  "timestamp": DateTime,
+  "identifier": String,
+  "cohort_id": String,        // For data isolation
+  "assignment_id": String,    // For multiple assignments per cohort
+  "session_metadata": {
+    "duration_seconds": Number,
+    "audio_quality_score": Number,
+    "connection_stability": Number,
+    "browser_info": String,
+    "device_info": String
+  },
+  "patient_conversation": {
+    // ... existing structure
+  },
+  "supervisor_conversation": {
+    // ... existing structure
+  },
+  "assessment_data": {
+    // ... existing structure
+  }
+}
+```
+
+#### Instructors Collection (New)
+```json
+{
+  "_id": ObjectId,
+  "email": String,
+  "name": String,
+  "role": String,             // "instructor", "admin", "coordinator"
+  "cohort_access": Array,     // ["PHYSIO2024_SEM1", "PHYSIO2024_SEM2"]
+  "permissions": {
+    "view_transcripts": Boolean,
+    "export_data": Boolean,
+    "manage_students": Boolean,
+    "configure_audio": Boolean
+  },
+  "created_at": DateTime,
+  "last_login": DateTime
+}
+```
+
+### Multi-Cohort Implementation Plan
+
+#### Phase 1 Enhancement: Multi-Cohort Foundation
+**Additional Deliverables:**
+
+1. **Cohort Management System**
+   - `utils/cohort_manager.py`: Cohort creation and management
+   - `utils/instructor_auth.py`: Instructor authentication and permissions
+   - Database migration scripts for existing data
+
+2. **Enhanced Configuration System**
+   ```python
+   # utils/cohort_config_manager.py
+   class CohortConfigManager:
+       def __init__(self):
+           self.mongodb_client = get_mongo_client()
+       
+       def get_cohort_config(self, cohort_id):
+           """Get configuration for specific cohort"""
+           cohort = self.mongodb_client.physiobot_realtime.cohorts.find_one(
+               {"cohort_id": cohort_id}
+           )
+           return cohort.get('settings', {}) if cohort else {}
+       
+       def update_cohort_config(self, cohort_id, settings):
+           """Update configuration for specific cohort"""
+           return self.mongodb_client.physiobot_realtime.cohorts.update_one(
+               {"cohort_id": cohort_id},
+               {"$set": {"settings": settings}}
+           )
+   ```
+
+3. **Student Management Enhancement**
+   ```python
+   # scripts/bulk_student_management.py
+   class BulkStudentManager:
+       def load_cohort_students(self, csv_path, cohort_id):
+           """Load students for specific cohort"""
+           df = pd.read_csv(csv_path)
+           df['cohort_id'] = cohort_id
+           # Generate identifiers with cohort prefix
+           df['identifier'] = df.apply(
+               lambda row: f"{cohort_id}_{generate_identifier(row)}", 
+               axis=1
+           )
+           return df
+       
+       def transfer_students(self, from_cohort, to_cohort):
+           """Transfer students between cohorts"""
+           # Implementation for cohort transitions
+   ```
+
+#### Phase 2 Enhancement: Multi-Cohort Authentication
+**Additional Deliverables:**
+
+1. **Enhanced Authentication System**
+   - Cohort-based login validation
+   - Session management with cohort context
+   - Instructor dashboard for cohort selection
+
+2. **Updated Home.py**
+   ```python
+   def enhanced_setup():
+       # ... existing setup code ...
+       
+       if "cohort_id" not in st.session_state:
+           st.session_state["cohort_id"] = None
+       
+       if "instructor_mode" not in st.session_state:
+           st.session_state["instructor_mode"] = False
+   
+   def cohort_identifier_validation():
+       identifier = st.session_state.get("user_identifier", "").strip()
+       if not identifier:
+           return False, None
+       
+       # Check if instructor login
+       if "@" in identifier:
+           return validate_instructor_login(identifier)
+       
+       # Regular student validation with cohort detection
+       return validate_student_identifier(identifier)
+   ```
+
+#### Phase 3-4 Enhancement: Cohort-Aware Conversations
+**Additional Deliverables:**
+
+1. **Cohort-Specific Prompts**
+   - Dynamic prompt loading based on cohort settings
+   - Assignment-specific instructions
+   - Customizable patient scenarios per cohort
+
+2. **Data Isolation**
+   - All database queries filtered by cohort_id
+   - Session-based cohort context enforcement
+   - Audit logging for cross-cohort access attempts
+
+#### Phase 5 Enhancement: Multi-Cohort Management Interface
+**Additional Deliverables:**
+
+1. **Instructor Dashboard**
+   ```python
+   # pages/Instructor_Dashboard.py
+   def instructor_dashboard():
+       st.title("Instructor Dashboard")
+       
+       # Cohort selection
+       cohorts = get_instructor_cohorts(st.session_state.get("instructor_email"))
+       selected_cohort = st.selectbox("Select Cohort", cohorts)
+       
+       if selected_cohort:
+           # Cohort statistics
+           stats = get_cohort_statistics(selected_cohort)
+           
+           col1, col2, col3, col4 = st.columns(4)
+           with col1:
+               st.metric("Total Students", stats['total_students'])
+           with col2:
+               st.metric("Completed Assignments", stats['completed'])
+           with col3:
+               st.metric("Average Score", f"{stats['avg_score']:.1f}")
+           with col4:
+               st.metric("Avg Duration", f"{stats['avg_duration']:.0f}min")
+           
+           # Student progress table
+           st.subheader("Student Progress")
+           progress_df = get_student_progress(selected_cohort)
+           st.dataframe(progress_df)
+           
+           # Export functionality
+           if st.button("Export Cohort Data"):
+               export_cohort_data(selected_cohort)
+   ```
+
+2. **Admin Configuration Interface**
+   ```python
+   # pages/Admin_Multi_Cohort.py
+   def admin_multi_cohort_page():
+       st.title("Multi-Cohort Administration")
+       
+       tab1, tab2, tab3 = st.tabs(["Cohort Management", "Student Management", "System Settings"])
+       
+       with tab1:
+           # Create new cohort
+           st.subheader("Create New Cohort")
+           cohort_form()
+           
+           # Manage existing cohorts
+           st.subheader("Existing Cohorts")
+           cohorts_table()
+       
+       with tab2:
+           # Bulk student operations
+           st.subheader("Bulk Student Management")
+           bulk_student_interface()
+       
+       with tab3:
+           # System-wide settings
+           st.subheader("System Configuration")
+           system_settings_interface()
+   ```
+
+### Scalability Considerations
+
+#### Database Optimization
+1. **Indexing Strategy**
+   ```javascript
+   // MongoDB indexes for multi-cohort performance
+   db.audio_transcripts.createIndex({"cohort_id": 1, "timestamp": -1})
+   db.audio_transcripts.createIndex({"identifier": 1, "cohort_id": 1})
+   db.valid_identifiers.createIndex({"cohort_id": 1, "is_active": 1})
+   db.cohorts.createIndex({"cohort_id": 1, "is_active": 1})
+   ```
+
+2. **Data Archiving**
+   - Automatic archiving of old cohort data
+   - Configurable retention policies
+   - Compressed storage for historical data
+
+#### Performance Optimization
+1. **Caching Strategy**
+   - Redis caching for cohort configurations
+   - Session-based caching for student data
+   - CDN for static assets per cohort
+
+2. **Load Balancing**
+   - Cohort-based load distribution
+   - Regional deployment for multi-campus support
+   - Auto-scaling based on cohort activity
+
+### Cost Considerations
+
+#### OpenAI API Usage
+- **Estimated Cost per Student**: $2-5 per complete assignment
+- **Monthly Cost for 200 students**: $400-1000
+- **Annual Cost for 4 cohorts (800 students)**: $1,600-4,000
+
+#### Infrastructure Scaling
+- **Database**: M10 cluster → M30 cluster for 500+ concurrent users
+- **Storage**: 10GB → 100GB for audio transcripts across multiple cohorts
+- **Monitoring**: Enhanced monitoring for multi-cohort performance
+
+### Implementation Recommendations
+
+#### Immediate (Phase 1)
+1. **Start with Cohort-Aware Schema**: Implement cohort_id fields from the beginning
+2. **Simple Cohort Management**: Basic cohort creation and student assignment
+3. **Data Isolation**: Ensure all queries include cohort_id filtering
+
+#### Short-term (Phase 2-3)
+1. **Instructor Dashboard**: Basic progress tracking and data export
+2. **Bulk Student Management**: CSV import/export with cohort assignment
+3. **Configuration per Cohort**: Allow different audio settings per cohort
+
+#### Long-term (Phase 4-6)
+1. **Advanced Analytics**: Cross-cohort performance comparison
+2. **Automated Archiving**: Semester-based data lifecycle management
+3. **Multi-Campus Support**: Institution-level hierarchy above cohorts
+
+### Migration Strategy for Existing Data
+
+#### Phase 1: Preparation
+1. **Backup Current Data**: Full MongoDB backup
+2. **Create Default Cohort**: Migrate existing data to "DEFAULT_COHORT"
+3. **Update Identifiers**: Add cohort_id to existing valid_identifiers
+
+#### Phase 2: Schema Migration
+```python
+# scripts/migrate_to_multi_cohort.py
+def migrate_existing_data():
+    """Migrate existing physiobot data to multi-cohort structure"""
+    
+    # Create default cohort
+    default_cohort = {
+        "cohort_id": "PHYSIO_LEGACY",
+        "cohort_name": "Legacy Cohort",
+        "academic_year": "2024",
+        "semester": "Migration",
+        "is_active": True,
+        "created_at": datetime.utcnow()
+    }
+    
+    # Migrate transcripts
+    db.audio_transcripts.update_many(
+        {"cohort_id": {"$exists": False}},
+        {"$set": {"cohort_id": "PHYSIO_LEGACY"}}
+    )
+    
+    # Migrate identifiers
+    db.valid_identifiers.update_many(
+        {"cohort_id": {"$exists": False}},
+        {"$set": {"cohort_id": "PHYSIO_LEGACY"}}
+    )
+```
+
+This enhanced multi-cohort architecture ensures the platform can scale to support multiple classes, semesters, and even different physiotherapy programs simultaneously while maintaining proper data isolation and administrative control.
