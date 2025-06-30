@@ -3,6 +3,7 @@ import os
 from typing import Dict, Any, Optional
 import logging
 from pathlib import Path
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -222,3 +223,178 @@ class ConfigManager:
                 }
             }
         }
+    
+    def update_config(self, new_config: Dict[str, Any]) -> bool:
+        """
+        Update configuration with new settings and save to file.
+        
+        Args:
+            new_config: Dictionary containing configuration updates
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Deep merge the new configuration with existing configuration
+            self.config = self._deep_merge(self.config, new_config)
+            
+            # Validate the updated configuration
+            validation_errors = self.validate_config()
+            if validation_errors:
+                error_msg = "Configuration validation failed:\n"
+                for section, errors in validation_errors.items():
+                    error_msg += f"{section}: {', '.join(errors)}\n"
+                logger.error(error_msg)
+                return False
+            
+            # Save to file
+            return self.save_config()
+            
+        except Exception as e:
+            logger.error(f"Error updating configuration: {e}")
+            return False
+    
+    def reset_to_defaults(self) -> bool:
+        """
+        Reset configuration to default values and save to file.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.config = self._get_default_config()
+            return self.save_config()
+        except Exception as e:
+            logger.error(f"Error resetting configuration to defaults: {e}")
+            return False
+    
+    def backup_config(self, backup_path: Optional[str] = None) -> bool:
+        """
+        Create a backup of the current configuration.
+        
+        Args:
+            backup_path: Optional path for backup file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if backup_path is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = f"{self.config_path.stem}_backup_{timestamp}.yaml"
+            
+            backup_path = Path(backup_path)
+            
+            with open(backup_path, 'w', encoding='utf-8') as file:
+                yaml.dump(self.config, file, default_flow_style=False, indent=2)
+                logger.info(f"Configuration backed up to {backup_path}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error creating configuration backup: {e}")
+            return False
+    
+    def restore_config(self, backup_path: str) -> bool:
+        """
+        Restore configuration from a backup file.
+        
+        Args:
+            backup_path: Path to the backup file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            backup_path = Path(backup_path)
+            if not backup_path.exists():
+                logger.error(f"Backup file {backup_path} not found")
+                return False
+            
+            with open(backup_path, 'r', encoding='utf-8') as file:
+                restored_config = yaml.safe_load(file)
+            
+            # Validate restored configuration
+            old_config = self.config
+            self.config = restored_config
+            validation_errors = self.validate_config()
+            
+            if validation_errors:
+                self.config = old_config
+                error_msg = "Restored configuration validation failed:\n"
+                for section, errors in validation_errors.items():
+                    error_msg += f"{section}: {', '.join(errors)}\n"
+                logger.error(error_msg)
+                return False
+            
+            # Save restored configuration
+            return self.save_config()
+            
+        except Exception as e:
+            logger.error(f"Error restoring configuration: {e}")
+            return False
+    
+    def get_config_info(self) -> Dict[str, Any]:
+        """
+        Get information about the current configuration.
+        
+        Returns:
+            Dictionary containing configuration metadata
+        """
+        try:
+            config_info = {
+                "config_file": str(self.config_path),
+                "file_exists": self.config_path.exists(),
+                "total_settings": self._count_settings(self.config),
+                "validation_status": "valid" if not self.validate_config() else "invalid",
+                "sections": list(self.config.keys())
+            }
+            
+            if self.config_path.exists():
+                stat = self.config_path.stat()
+                config_info["last_modified"] = datetime.fromtimestamp(stat.st_mtime)
+                config_info["file_size_bytes"] = stat.st_size
+            
+            return config_info
+            
+        except Exception as e:
+            logger.error(f"Error getting configuration info: {e}")
+            return {"error": str(e)}
+    
+    def _deep_merge(self, dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Deep merge two dictionaries.
+        
+        Args:
+            dict1: Base dictionary
+            dict2: Dictionary to merge into dict1
+            
+        Returns:
+            Merged dictionary
+        """
+        result = dict1.copy()
+        
+        for key, value in dict2.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+        
+        return result
+    
+    def _count_settings(self, config_dict: Dict[str, Any]) -> int:
+        """
+        Count total number of settings in configuration.
+        
+        Args:
+            config_dict: Configuration dictionary
+            
+        Returns:
+            Total number of settings
+        """
+        count = 0
+        for value in config_dict.values():
+            if isinstance(value, dict):
+                count += self._count_settings(value)
+            else:
+                count += 1
+        return count

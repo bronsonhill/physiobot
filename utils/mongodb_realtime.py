@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from bson.objectid import ObjectId
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import streamlit as st
 import logging
@@ -308,3 +308,202 @@ def migrate_legacy_data(connection_string: str, legacy_db_name: str = "physiobot
         return False
     finally:
         client.close()
+
+def get_database_stats() -> Dict[str, Any]:
+    """
+    Get overall database statistics for the admin dashboard.
+    
+    Returns:
+        Dictionary containing database statistics
+    """
+    try:
+        connection_string = st.session_state.get("mongodb_uri")
+        if not connection_string:
+            return {"error": "No database connection"}
+            
+        client = get_mongo_client(connection_string)
+        db_name = get_database_name()
+        db = getattr(client, db_name)
+        
+        # Total sessions
+        total_sessions = db.audio_transcripts.count_documents({})
+        
+        # Active users in last 24 hours
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        active_users_24h = db.audio_transcripts.distinct("identifier", {
+            "timestamp": {"$gte": twenty_four_hours_ago}
+        })
+        
+        # Average session duration
+        pipeline = [
+            {"$match": {"session_metadata.duration_seconds": {"$exists": True}}},
+            {"$group": {
+                "_id": None,
+                "avg_duration": {"$avg": "$session_metadata.duration_seconds"},
+                "total_completed": {"$sum": 1}
+            }}
+        ]
+        
+        duration_stats = list(db.audio_transcripts.aggregate(pipeline))
+        avg_duration = duration_stats[0].get("avg_duration", 0) if duration_stats else 0
+        total_completed = duration_stats[0].get("total_completed", 0) if duration_stats else 0
+        
+        # Success rate (sessions with both patient and supervisor conversations)
+        successful_sessions = db.audio_transcripts.count_documents({
+            "supervisor_conversation": {"$ne": {}}
+        })
+        
+        success_rate = (successful_sessions / total_sessions) if total_sessions > 0 else 0
+        
+        return {
+            "total_sessions": total_sessions,
+            "active_users_24h": len(active_users_24h),
+            "avg_session_duration": avg_duration,
+            "success_rate": success_rate,
+            "completed_sessions": total_completed,
+            "successful_sessions": successful_sessions
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting database stats: {e}")
+        return {
+            "total_sessions": 0,
+            "active_users_24h": 0,
+            "avg_session_duration": 0,
+            "success_rate": 0,
+            "completed_sessions": 0,
+            "successful_sessions": 0,
+            "error": str(e)
+        }
+    finally:
+        if 'client' in locals():
+            client.close()
+
+def get_recent_sessions(limit: int = 20) -> List[Dict[str, Any]]:
+    """
+    Get recent session data for the admin dashboard.
+    
+    Args:
+        limit: Maximum number of sessions to return
+        
+    Returns:
+        List of recent session documents
+    """
+    try:
+        connection_string = st.session_state.get("mongodb_uri")
+        if not connection_string:
+            return []
+            
+        client = get_mongo_client(connection_string)
+        db_name = get_database_name()
+        db = getattr(client, db_name)
+        
+        # Get recent sessions with relevant fields
+        sessions = list(db.audio_transcripts.find(
+            {},
+            {
+                "timestamp": 1,
+                "identifier": 1,
+                "session_metadata.duration_seconds": 1,
+                "patient_conversation.conversation_metrics.total_exchanges": 1,
+                "supervisor_conversation": 1
+            }
+        ).sort("timestamp", -1).limit(limit))
+        
+        # Format sessions for display
+        formatted_sessions = []
+        for session in sessions:
+            session_duration = session.get("session_metadata", {}).get("duration_seconds", 0)
+            total_exchanges = session.get("patient_conversation", {}).get("conversation_metrics", {}).get("total_exchanges", 0)
+            
+            # Determine status
+            if session.get("supervisor_conversation"):
+                status = "Completed"
+            elif session.get("patient_conversation"):
+                status = "In Progress"
+            else:
+                status = "Started"
+            
+            formatted_sessions.append({
+                "_id": str(session["_id"]),
+                "timestamp": session.get("timestamp"),
+                "identifier": session.get("identifier", "Unknown"),
+                "session_duration": session_duration,
+                "total_exchanges": total_exchanges,
+                "status": status
+            })
+        
+        return formatted_sessions
+        
+    except Exception as e:
+        logger.error(f"Error getting recent sessions: {e}")
+        return []
+    finally:
+        if 'client' in locals():
+            client.close()
+
+def get_system_health() -> Dict[str, Any]:
+    """
+    Check system health status for monitoring.
+    
+    Returns:
+        Dictionary containing system health information
+    """
+    try:
+        connection_string = st.session_state.get("mongodb_uri")
+        health_status = {
+            "database": "unknown",
+            "openai_api": "unknown",
+            "audio_service": "unknown",
+            "overall": "unknown"
+        }
+        
+        # Test database connection
+        try:
+            client = get_mongo_client(connection_string)
+            db_name = get_database_name()
+            db = getattr(client, db_name)
+            # Simple ping test
+            db.command("ping")
+            health_status["database"] = "healthy"
+            client.close()
+        except Exception as e:
+            health_status["database"] = f"error: {str(e)}"
+        
+        # Test OpenAI API (basic check)
+        try:
+            # This would be a real API health check
+            # For now, just check if API key exists
+            openai_key = st.secrets.get("OPENAI_API_KEY")
+            if openai_key:
+                health_status["openai_api"] = "available"
+            else:
+                health_status["openai_api"] = "error: no API key"
+        except Exception as e:
+            health_status["openai_api"] = f"error: {str(e)}"
+        
+        # Audio service health (mock for now)
+        health_status["audio_service"] = "available"
+        
+        # Overall health
+        healthy_services = sum(1 for status in health_status.values() 
+                             if status in ["healthy", "available"])
+        total_services = len(health_status) - 1  # Exclude 'overall'
+        
+        if healthy_services == total_services:
+            health_status["overall"] = "healthy"
+        elif healthy_services > total_services / 2:
+            health_status["overall"] = "degraded"
+        else:
+            health_status["overall"] = "unhealthy"
+        
+        return health_status
+        
+    except Exception as e:
+        logger.error(f"Error checking system health: {e}")
+        return {
+            "database": "error",
+            "openai_api": "error", 
+            "audio_service": "error",
+            "overall": "error"
+        }
