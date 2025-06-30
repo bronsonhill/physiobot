@@ -52,3 +52,22 @@ environment:
   development: true
   debug_logging: true
   log_level: "INFO"
+
+# Phase 5 Testing settings
+testing_settings:
+  enable_automated_tests: true
+  test_schedule: "daily"
+  report_retention_days: 30
+  performance_thresholds:
+    max_latency_ms: 200
+    min_quality_score: 4.0
+    max_error_rate: 0.05
+
+# Phase 5 Monitoring settings
+monitoring_settings:
+  enable_real_time_monitoring: true
+  alert_thresholds:
+    high_cpu: 80
+    high_memory: 85
+    high_latency: 300
+  dashboard_refresh_interval: 30
