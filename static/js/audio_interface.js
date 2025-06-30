@@ -118,23 +118,33 @@ class AudioInterface {
         this.analyser.smoothingTimeConstant = 0.8;
 
         // Create processor for audio data capture
-        await this.audioContext.audioWorklet.addModule('/static/js/audio_processor.js');
-        this.processor = new AudioWorkletNode(this.audioContext, 'audio-processor', {
-            processorOptions: {
-                sampleRate: this.config.sampleRate,
-                bufferSize: this.config.bufferSize
-            }
-        });
+        try {
+            await this.audioContext.audioWorklet.addModule('./static/js/audio_processor.js');
+            this.processor = new AudioWorkletNode(this.audioContext, 'audio-processor', {
+                processorOptions: {
+                    sampleRate: this.config.sampleRate,
+                    bufferSize: this.config.bufferSize
+                }
+            });
+        } catch (error) {
+            console.warn('Failed to load audio processor worklet:', error);
+            // Fallback: we can still work without the processor for basic functionality
+            this.processor = null;
+        }
 
         // Setup processor message handling
-        this.processor.port.onmessage = (event) => {
-            this.handleProcessorMessage(event.data);
-        };
+        if (this.processor) {
+            this.processor.port.onmessage = (event) => {
+                this.handleProcessorMessage(event.data);
+            };
+        }
 
         // Connect audio nodes
         this.microphone.connect(this.gainNode);
         this.gainNode.connect(this.analyser);
-        this.gainNode.connect(this.processor);
+        if (this.processor) {
+            this.gainNode.connect(this.processor);
+        }
 
         console.log('Audio nodes setup completed');
     }
@@ -148,7 +158,7 @@ class AudioInterface {
             return false;
         }
 
-        if (!this.audioContext || !this.processor) {
+        if (!this.audioContext) {
             console.error('Audio context not initialized');
             return false;
         }
@@ -159,7 +169,9 @@ class AudioInterface {
 
             // Start recording
             this.isRecording = true;
-            this.processor.port.postMessage({ command: 'start' });
+            if (this.processor) {
+                this.processor.port.postMessage({ command: 'start' });
+            }
 
             // Start visualization if enabled
             if (this.config.visualizationEnabled) {
@@ -189,7 +201,9 @@ class AudioInterface {
 
         try {
             this.isRecording = false;
-            this.processor.port.postMessage({ command: 'stop' });
+            if (this.processor) {
+                this.processor.port.postMessage({ command: 'stop' });
+            }
 
             // Stop visualization
             if (this.animationFrame) {
