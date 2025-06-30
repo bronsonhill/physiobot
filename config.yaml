@@ -1,0 +1,45 @@
+# PhysioBot Realtime Audio Configuration
+# Phase 5 Implementation - UI/UX Enhancement & Configuration
+
+audio_settings:
+  voice_type: "alloy"  # OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
+  speech_speed: 1.0    # Range: 0.25 - 4.0
+  conversation_detection:
+    silence_threshold: 2.0  # seconds
+    volume_threshold: 0.1
+  quality_settings:
+    sample_rate: 24000
+    format: "pcm16"
+    
+conversation_settings:
+  max_duration: 1800    # 30 minutes
+  auto_save_interval: 300  # 5 minutes
+  connection_timeout: 30
+  max_responses: 1000
+
+ui_settings:
+  show_live_transcript: true
+  enable_audio_visualization: true
+  theme: "modern"
+  show_progress_indicators: true
+  enable_keyboard_shortcuts: true
+  
+# Multi-cohort support configuration
+cohort_settings:
+  default_cohort: "PHYSIO_DEFAULT"
+  enable_multi_cohort: false
+  instructor_mode: false
+  
+# Testing and diagnostics
+diagnostics:
+  enable_performance_monitoring: true
+  log_audio_quality: true
+  enable_browser_compatibility_check: true
+  debug_mode: false
+  
+# System settings
+system:
+  database_name: "physiobot-realtime"
+  session_timeout: 3600  # 1 hour
+  max_concurrent_sessions: 100
+  enable_analytics: true

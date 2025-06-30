@@ -1,0 +1,211 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhysioBot Browser Compatibility Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .test-button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>PhysioBot Audio Compatibility Test</h1>
+    <div id="results"></div>
+    
+    <h2>Test Controls</h2>
+    <button class="test-button" onclick="testMicrophone()">Test Microphone</button>
+    <button class="test-button" onclick="testSpeakers()">Test Speakers</button>
+    <button class="test-button" onclick="testWebSocket()">Test WebSocket</button>
+    <button class="test-button" onclick="testWebRTC()">Test WebRTC</button>
+    <button class="test-button" onclick="runAllTests()">Run All Tests</button>
+    
+    <script>
+        const results = document.getElementById('results');
+        const testResults = {};
+        
+        function addResult(test, status, message) {
+            testResults[test] = { status, message, timestamp: new Date().toISOString() };
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            results.innerHTML = '';
+            for (const [test, result] of Object.entries(testResults)) {
+                const div = document.createElement('div');
+                div.className = `test-result ${result.status}`;
+                div.innerHTML = `<strong>${test}:</strong> ${result.message}`;
+                results.appendChild(div);
+            }
+        }
+        
+        async function testMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                addResult('Microphone Access', 'success', '✅ Microphone access granted');
+                
+                // Test microphone features
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                addResult('Audio Context', 'success', '✅ Audio context created successfully');
+                
+            } catch (error) {
+                addResult('Microphone Access', 'error', `❌ Microphone access failed: ${error.message}`);
+            }
+        }
+        
+        async function testSpeakers() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+                
+                addResult('Speaker Output', 'success', '✅ Audio output test completed');
+            } catch (error) {
+                addResult('Speaker Output', 'error', `❌ Audio output test failed: ${error.message}`);
+            }
+        }
+        
+        function testWebSocket() {
+            try {
+                const ws = new WebSocket('wss://echo.websocket.org');
+                
+                ws.onopen = function() {
+                    addResult('WebSocket Connection', 'success', '✅ WebSocket connection established');
+                    ws.send('test message');
+                };
+                
+                ws.onmessage = function(event) {
+                    if (event.data === 'test message') {
+                        addResult('WebSocket Messaging', 'success', '✅ WebSocket messaging working');
+                    }
+                    ws.close();
+                };
+                
+                ws.onerror = function(error) {
+                    addResult('WebSocket Connection', 'error', `❌ WebSocket error: ${error.message}`);
+                };
+                
+                ws.onclose = function() {
+                    // Connection closed normally
+                };
+                
+                // Timeout test
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        addResult('WebSocket Connection', 'warning', '⚠️ WebSocket connection timeout');
+                        ws.close();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                addResult('WebSocket Support', 'error', `❌ WebSocket not supported: ${error.message}`);
+            }
+        }
+        
+        async function testWebRTC() {
+            try {
+                const pc = new RTCPeerConnection();
+                addResult('WebRTC Support', 'success', '✅ WebRTC is supported');
+                
+                // Test getUserMedia (needed for WebRTC)
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                pc.addTrack(stream.getAudioTracks()[0], stream);
+                
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                addResult('WebRTC Audio', 'success', '✅ WebRTC audio capabilities confirmed');
+                
+                stream.getTracks().forEach(track => track.stop());
+                pc.close();
+                
+            } catch (error) {
+                addResult('WebRTC Support', 'error', `❌ WebRTC test failed: ${error.message}`);
+            }
+        }
+        
+        async function runAllTests() {
+            addResult('Test Suite', 'warning', '🔄 Running comprehensive browser tests...');
+            
+            await testMicrophone();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testSpeakers();  
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            testWebSocket();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            await testWebRTC();
+            
+            // Browser-specific tests
+            addResult('Browser Info', 'success', 
+                `✅ ${navigator.userAgent.includes('Chrome') ? 'Chrome' : 
+                       navigator.userAgent.includes('Firefox') ? 'Firefox' :
+                       navigator.userAgent.includes('Safari') ? 'Safari' :
+                       navigator.userAgent.includes('Edge') ? 'Edge' : 'Unknown'} detected`);
+            
+            // Feature detection
+            const features = {
+                'Service Workers': 'serviceWorker' in navigator,
+                'Push Notifications': 'PushManager' in window,
+                'Web Audio API': 'AudioContext' in window || 'webkitAudioContext' in window,
+                'Media Devices': 'mediaDevices' in navigator,
+                'WebRTC': 'RTCPeerConnection' in window
+            };
+            
+            for (const [feature, supported] of Object.entries(features)) {
+                addResult(feature, supported ? 'success' : 'warning', 
+                         supported ? `✅ ${feature} supported` : `⚠️ ${feature} not supported`);
+            }
+            
+            // Save results
+            setTimeout(() => {
+                const resultsJson = JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    results: testResults
+                }, null, 2);
+                
+                const blob = new Blob([resultsJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'browser_compatibility_results.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                addResult('Test Complete', 'success', '✅ All tests completed. Results downloaded.');
+            }, 1000);
+        }
+        
+        // Auto-run basic detection on page load
+        window.onload = function() {
+            addResult('Page Load', 'success', '✅ Compatibility test page loaded successfully');
+            
+            // Basic feature detection
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                addResult('Media Devices API', 'success', '✅ Media Devices API available');
+            } else {
+                addResult('Media Devices API', 'error', '❌ Media Devices API not available');
+            }
+        };
+    </script>
+</body>
+</html>
+        

@@ -1,4 +1,38 @@
+# Core dependencies
 openai==1.55.3
 pymongo>=4.7
 python-dotenv
 streamlit>=1.40.2
+
+# Phase 5 - UI/UX Enhancement & Testing Dependencies
+# Configuration management
+pyyaml>=6.0
+pandas>=2.0.0
+
+# Testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+
+# Data visualization and analytics
+plotly>=5.15.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Browser compatibility testing
+selenium>=4.10.0
+webdriver-manager>=3.8.0
+
+# Performance monitoring
+psutil>=5.9.0
+memory-profiler>=0.60.0
+
+# Documentation generation
+markdown>=3.4.0
+mkdocs>=1.5.0
+mkdocs-material>=9.0.0
+
+# Additional utilities for enhanced UI
+streamlit-plotly-events>=0.0.6
+streamlit-option-menu>=0.3.6
+streamlit-ace>=0.1.1
