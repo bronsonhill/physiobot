@@ -1,6 +1,6 @@
 /**
- * AudioProcessor - AudioWorkletProcessor for real-time audio capture
- * Handles audio data capture, volume detection, and buffering
+ * AudioProcessor - Web Audio API AudioWorklet processor for real-time audio capture
+ * This processor handles audio data capture from the microphone and volume level detection
  */
 
 class AudioProcessor extends AudioWorkletProcessor {
@@ -11,201 +11,113 @@ class AudioProcessor extends AudioWorkletProcessor {
         this.sampleRate = options.processorOptions?.sampleRate || 24000;
         this.bufferSize = options.processorOptions?.bufferSize || 4096;
         
-        // Processing state
+        // State
         this.isRecording = false;
-        this.buffer = new Float32Array(this.bufferSize);
-        this.bufferIndex = 0;
+        this.audioBuffer = [];
+        this.volumeSmoothing = 0.95;
+        this.currentVolume = 0;
         
-        // Volume detection
-        this.volumeAccumulator = 0;
-        this.volumeSampleCount = 0;
-        this.volumeReportInterval = Math.floor(this.sampleRate / 10); // Report 10 times per second
+        // Volume detection parameters
+        this.volumeThreshold = 0.01;
+        this.silenceFrames = 0;
+        this.maxSilenceFrames = Math.floor(this.sampleRate / 128 * 0.5); // 0.5 seconds of silence
         
         // Listen for messages from main thread
         this.port.onmessage = (event) => {
             this.handleMessage(event.data);
         };
         
-        console.log('AudioProcessor initialized with sampleRate:', this.sampleRate, 'bufferSize:', this.bufferSize);
+        console.log('AudioProcessor initialized with sampleRate:', this.sampleRate);
     }
-
-    /**
-     * Process audio data
-     */
-    process(inputs, outputs, parameters) {
-        const input = inputs[0];
-        
-        // Only process if we have input and are recording
-        if (!input || !input[0] || !this.isRecording) {
-            return true;
-        }
-        
-        const inputChannel = input[0]; // First channel (mono)
-        
-        // Process each sample
-        for (let i = 0; i < inputChannel.length; i++) {
-            const sample = inputChannel[i];
-            
-            // Add to buffer
-            this.buffer[this.bufferIndex] = sample;
-            this.bufferIndex++;
-            
-            // Accumulate volume data
-            this.volumeAccumulator += Math.abs(sample);
-            this.volumeSampleCount++;
-            
-            // Send buffer when full
-            if (this.bufferIndex >= this.bufferSize) {
-                this.sendAudioData();
-                this.bufferIndex = 0;
-            }
-            
-            // Report volume periodically
-            if (this.volumeSampleCount >= this.volumeReportInterval) {
-                this.reportVolume();
-            }
-        }
-        
-        return true; // Keep processor alive
-    }
-
-    /**
-     * Handle messages from main thread
-     */
+    
     handleMessage(data) {
         switch (data.command) {
             case 'start':
                 this.startRecording();
                 break;
-                
             case 'stop':
                 this.stopRecording();
                 break;
-                
-            case 'configure':
-                this.configure(data.config);
-                break;
-                
             default:
                 console.log('Unknown command:', data.command);
         }
     }
-
-    /**
-     * Start recording audio
-     */
+    
     startRecording() {
         this.isRecording = true;
-        this.bufferIndex = 0;
-        this.volumeAccumulator = 0;
-        this.volumeSampleCount = 0;
-        
-        console.log('AudioProcessor: Recording started');
+        this.audioBuffer = [];
+        this.currentVolume = 0;
+        this.silenceFrames = 0;
+        console.log('AudioProcessor started recording');
     }
-
-    /**
-     * Stop recording audio
-     */
+    
     stopRecording() {
         this.isRecording = false;
+        console.log('AudioProcessor stopped recording');
+    }
+    
+    process(inputs, outputs, parameters) {
+        const input = inputs[0];
         
-        // Send any remaining buffered data
-        if (this.bufferIndex > 0) {
-            this.sendAudioData();
-            this.bufferIndex = 0;
+        if (!input || input.length === 0) {
+            return true;
         }
         
-        console.log('AudioProcessor: Recording stopped');
-    }
-
-    /**
-     * Configure processor parameters
-     */
-    configure(config) {
-        if (config.bufferSize) {
-            this.bufferSize = config.bufferSize;
-            this.buffer = new Float32Array(this.bufferSize);
-            this.bufferIndex = 0;
+        const inputChannel = input[0];
+        const frameCount = inputChannel.length;
+        
+        if (frameCount === 0) {
+            return true;
         }
         
-        if (config.volumeReportInterval) {
-            this.volumeReportInterval = config.volumeReportInterval;
+        // Calculate volume level (RMS)
+        let sum = 0;
+        for (let i = 0; i < frameCount; i++) {
+            sum += inputChannel[i] * inputChannel[i];
         }
+        const rms = Math.sqrt(sum / frameCount);
         
-        console.log('AudioProcessor: Configuration updated', config);
-    }
-
-    /**
-     * Send buffered audio data to main thread
-     */
-    sendAudioData() {
-        // Create a copy of the current buffer content
-        const audioData = new Float32Array(this.bufferIndex);
-        audioData.set(this.buffer.subarray(0, this.bufferIndex));
+        // Smooth volume level
+        this.currentVolume = this.currentVolume * this.volumeSmoothing + rms * (1 - this.volumeSmoothing);
         
-        // Send to main thread
-        this.port.postMessage({
-            type: 'audioData',
-            audioData: audioData,
-            timestamp: currentTime,
-            bufferSize: this.bufferIndex
-        });
-    }
-
-    /**
-     * Report current volume level
-     */
-    reportVolume() {
-        if (this.volumeSampleCount === 0) return;
-        
-        // Calculate RMS volume
-        const rmsVolume = Math.sqrt(this.volumeAccumulator / this.volumeSampleCount);
-        
-        // Send volume data to main thread
+        // Send volume level to main thread
         this.port.postMessage({
             type: 'volume',
-            volume: rmsVolume,
-            timestamp: currentTime
+            volume: this.currentVolume
         });
         
-        // Reset volume accumulator
-        this.volumeAccumulator = 0;
-        this.volumeSampleCount = 0;
-    }
-
-    /**
-     * Calculate audio statistics
-     */
-    calculateAudioStats(buffer, length) {
-        let sum = 0;
-        let sumSquares = 0;
-        let max = 0;
-        
-        for (let i = 0; i < length; i++) {
-            const sample = Math.abs(buffer[i]);
-            sum += sample;
-            sumSquares += sample * sample;
-            max = Math.max(max, sample);
+        // If recording, capture audio data
+        if (this.isRecording) {
+            // Copy audio data to avoid issues with transferable objects
+            const audioData = new Float32Array(frameCount);
+            audioData.set(inputChannel);
+            
+            // Add to buffer
+            this.audioBuffer.push(audioData);
+            
+            // Send audio data to main thread
+            this.port.postMessage({
+                type: 'audioData',
+                audioData: Array.from(audioData) // Convert to regular array for transfer
+            });
+            
+            // Detect silence for automatic stopping (optional feature)
+            if (this.currentVolume < this.volumeThreshold) {
+                this.silenceFrames++;
+            } else {
+                this.silenceFrames = 0;
+            }
+            
+            // Auto-stop on extended silence (optional)
+            if (this.silenceFrames > this.maxSilenceFrames) {
+                this.port.postMessage({
+                    type: 'silenceDetected'
+                });
+                this.silenceFrames = 0; // Reset to avoid repeated messages
+            }
         }
         
-        const mean = sum / length;
-        const rms = Math.sqrt(sumSquares / length);
-        
-        return {
-            mean,
-            rms,
-            max,
-            samples: length
-        };
-    }
-
-    /**
-     * Apply simple audio processing (optional)
-     */
-    processAudioBuffer(buffer, length) {
-        // This can be extended to apply filters, noise reduction, etc.
-        // For now, just return the buffer as-is
-        return buffer;
+        return true;
     }
 }
 
