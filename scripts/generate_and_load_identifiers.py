@@ -54,7 +54,7 @@ def process_and_load_identifiers(input_csv_path, connection_string):
 
         # Connect to MongoDB and upload only the identifiers
         client = get_mongo_client(connection_string)
-        db = client.physiobot
+        db = client.physiobot_realtime
         collection = db.valid_identifiers
 
         # Clear existing identifiers if needed

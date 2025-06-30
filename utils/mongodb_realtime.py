@@ -9,14 +9,19 @@ from utils.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
+# Cache the config manager instance
+_config_manager = None
+
 def get_mongo_client(connection_string):
     """Get MongoDB client for realtime database."""
     return MongoClient(connection_string, server_api=ServerApi('1'))
 
 def get_database_name():
     """Get the database name from configuration."""
-    config_manager = ConfigManager()
-    return config_manager.get_setting('database_settings.database_name', 'physiobot-realtime')
+    global _config_manager
+    if _config_manager is None:
+        _config_manager = ConfigManager()
+    return _config_manager.get_setting('database_settings.database_name', 'physiobot-realtime')
 
 def check_identifier(connection_string: str, identifier: str, cohort_id: Optional[str] = None) -> bool:
     """

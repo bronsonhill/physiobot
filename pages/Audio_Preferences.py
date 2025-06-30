@@ -2,8 +2,10 @@ import streamlit as st
 import json
 from datetime import datetime
 from typing import Dict, Any
+import yaml
+from pathlib import Path
 
-from utils.config_manager import ConfigManager
+from utils.config_manager import ConfigManager, get_config_manager
 from utils.mongodb_realtime import get_mongo_client
 
 # Page configuration
@@ -24,8 +26,8 @@ def audio_preferences_page():
     st.markdown("Configure your audio settings for the best conversation experience.")
     st.markdown("---")
     
-    # Load current configuration
-    config_manager = ConfigManager()
+    # Get cached configuration
+    config_manager = get_config_manager()
     
     # Create tabs for different sections
     tab1, tab2, tab3, tab4 = st.tabs([

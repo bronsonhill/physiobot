@@ -4,8 +4,9 @@ import json
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 import pandas as pd
+from pathlib import Path
 
-from utils.config_manager import ConfigManager
+from utils.config_manager import ConfigManager, get_config_manager
 from utils.cohort_config_manager import CohortConfigManager
 from utils.mongodb_realtime import get_mongo_client
 
@@ -38,24 +39,20 @@ def check_admin_auth():
         st.info("Contact your system administrator for access credentials.")
         st.stop()
 
-def admin_config_page():
-    """Main admin configuration page."""
-    check_admin_auth()
+def main():
+    st.title("⚙️ Admin Configuration")
+    st.markdown("System configuration and cohort management.")
     
-    st.title("⚙️ PhysioBot Admin Configuration")
-    st.markdown("---")
-    
-    # Initialize managers
-    config_manager = ConfigManager()
+    # Get cached configuration managers
+    config_manager = get_config_manager()
     cohort_manager = CohortConfigManager()
     
-    # Create tabs for different configuration sections
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # Create tabs for different sections
+    tab1, tab2, tab3, tab4 = st.tabs([
         "🎵 Audio Settings", 
         "👥 Cohort Management", 
-        "🔧 System Settings",
-        "📊 Analytics & Monitoring",
-        "🧪 Testing Tools"
+        "⚙️ System Settings",
+        "📊 Analytics & Monitoring"
     ])
     
     with tab1:
@@ -69,9 +66,6 @@ def admin_config_page():
     
     with tab4:
         analytics_monitoring_interface(cohort_manager)
-    
-    with tab5:
-        testing_tools_interface()
 
 def audio_settings_interface(config_manager: ConfigManager):
     """Interface for managing audio settings."""
@@ -537,4 +531,4 @@ def show_cohort_statistics(cohort_id: str):
         st.metric("Completion Rate", f"{stats['completion_rate']:.1f}%")
 
 if __name__ == "__main__":
-    admin_config_page()
+    main()

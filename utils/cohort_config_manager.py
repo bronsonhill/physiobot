@@ -6,6 +6,9 @@ from utils.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
+# Cache the config manager instance
+_config_manager = None
+
 class CohortConfigManager:
     """Configuration manager for cohort-specific settings."""
     
@@ -16,8 +19,11 @@ class CohortConfigManager:
         Args:
             connection_string: MongoDB connection string
         """
+        global _config_manager
         self.connection_string = connection_string
-        self.config_manager = ConfigManager()
+        if _config_manager is None:
+            _config_manager = ConfigManager()
+        self.config_manager = _config_manager
         self.database_name = self.config_manager.get_setting('database_settings.database_name', 'physiobot-realtime')
     
     def get_cohort_config(self, cohort_id: str) -> Dict[str, Any]:

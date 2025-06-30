@@ -5,13 +5,17 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import time
 import numpy as np
+import logging
+from openai import OpenAI
 
 from Home import setup
 from utils.conversation_handler import ConversationHandler, ConversationState
-from utils.config_manager import ConfigManager
+from utils.config_manager import ConfigManager, get_config_manager
 from utils.mongodb_realtime import log_audio_transcript, get_conversation_history
 from utils.audio_manager import AudioManager
 from utils.audio_analysis import AudioConversationAnalyzer, create_conversation_analysis_report
+
+logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
@@ -79,7 +83,7 @@ MAXIMUM_RESPONSES = 50
 @st.cache_resource
 def initialize_components():
     """Initialize conversation handler and configuration."""
-    config_manager = ConfigManager()
+    config_manager = get_config_manager()
     config = config_manager.config
     
     # Get OpenAI API key
@@ -432,14 +436,27 @@ def main():
     st.markdown("Get detailed feedback on your patient conversation with voice interaction")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    client = setup()
-    config, api_key = initialize_components()
-
-    # Check prerequisites
-    if not st.session_state.get("part_1_done") or not st.session_state.get("session_id"):
-        st.error("❌ Please complete the Patient Conversation first.")
-        st.info("Navigate to the Patient Conversation page to begin your audio assessment.")
+    # Check if user is authenticated
+    if "user_identifier" not in st.session_state or not st.session_state["user_identifier"]:
+        st.error("❌ Please enter your identifier on the Home page first.")
         st.stop()
+
+    # Check if patient conversation is completed
+    if not st.session_state.get("p_conversation_finished", False):
+        st.error("❌ Please complete the Patient conversation first.")
+        st.stop()
+
+    # Check if supervisor conversation is already finished
+    if st.session_state.get("s_conversation_finished", False):
+        st.success("✅ Supervisor conversation completed! You have finished both conversations.")
+        st.stop()
+
+    # Setup
+    client = setup()
+
+    # Get cached configuration
+    config_manager = get_config_manager()
+    config = config_manager.config
 
     # Initialize supervisor conversation state
     if "s_conversation_initialized" not in st.session_state:
@@ -475,7 +492,7 @@ def main():
                     enhanced_prompt = create_enhanced_supervisor_prompt(patient_context, audio_analysis)
                     
                     # Initialize conversation handler
-                    conversation_handler = ConversationHandler(config, api_key)
+                    conversation_handler = ConversationHandler(config, client)
                     st.session_state["s_conversation_handler"] = conversation_handler
                     
                     # Start conversation with enhanced prompt

@@ -29,7 +29,7 @@ def load_identifiers(csv_path, connection_string):
 
         # Connect to MongoDB
         client = get_mongo_client(connection_string)
-        db = client.physiobotv2
+        db = client.physiobot_realtime
         collection = db.valid_identifiers
 
         # Clear existing identifiers if needed

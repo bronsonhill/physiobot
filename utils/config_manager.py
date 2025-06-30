@@ -6,8 +6,35 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Global instance cache
+_config_manager_instance = None
+
+def get_config_manager(config_path: str = "config.yaml") -> 'ConfigManager':
+    """
+    Get a cached ConfigManager instance.
+    
+    Args:
+        config_path: Path to the configuration file
+        
+    Returns:
+        ConfigManager instance
+    """
+    global _config_manager_instance
+    if _config_manager_instance is None:
+        _config_manager_instance = ConfigManager(config_path)
+    return _config_manager_instance
+
 class ConfigManager:
     """Configuration manager for physiobot-realtime application."""
+    
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls, config_path: str = "config.yaml"):
+        """Implement singleton pattern."""
+        if cls._instance is None:
+            cls._instance = super(ConfigManager, cls).__new__(cls)
+        return cls._instance
     
     def __init__(self, config_path: str = "config.yaml"):
         """
@@ -16,8 +43,11 @@ class ConfigManager:
         Args:
             config_path: Path to the configuration file
         """
-        self.config_path = Path(config_path)
-        self.config = self.load_config()
+        # Only initialize once
+        if not self._initialized:
+            self.config_path = Path(config_path)
+            self.config = self.load_config()
+            ConfigManager._initialized = True
     
     def load_config(self) -> Dict[str, Any]:
         """

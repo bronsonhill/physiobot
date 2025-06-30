@@ -4,10 +4,11 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
+from openai import OpenAI
 
 from Home import setup
 from utils.conversation_handler import ConversationHandler, ConversationState
-from utils.config_manager import ConfigManager
+from utils.config_manager import ConfigManager, get_config_manager
 from utils.mongodb_realtime import log_audio_transcript
 
 # Configure logging
@@ -24,6 +25,11 @@ st.set_page_config(
 # Check user authentication
 if not bool(st.session_state.get("user_identifier", "").strip()):
     st.error("Please enter your identifier on the Home page before starting the conversation.")
+    st.stop()
+
+# Check if patient conversation is already finished
+if st.session_state.get("p_conversation_finished", False):
+    st.success("✅ Patient conversation completed! You can now proceed to the Supervisor conversation.")
     st.stop()
 
 # Initialize session state for audio conversation
@@ -53,7 +59,7 @@ if "conversation_duration" not in st.session_state:
 
 # Setup OpenAI client and configuration
 client = setup()
-config_manager = ConfigManager()
+config_manager = get_config_manager()
 config = config_manager.config
 
 # Page title and header
