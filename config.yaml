@@ -1,0 +1,20 @@
+audio_settings:
+  voice_type: "alloy"  # OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
+  speech_speed: 1.0    # Range: 0.25 - 4.0
+  conversation_detection:
+    silence_threshold: 2.0  # seconds
+    volume_threshold: 0.1
+  quality_settings:
+    sample_rate: 24000
+    format: "pcm16"
+
+conversation_settings:
+  max_duration: 1800    # 30 minutes
+  auto_save_interval: 300  # 5 minutes
+  connection_timeout: 30
+  max_responses: 1000
+
+ui_settings:
+  show_live_transcript: true
+  enable_audio_visualization: true
+  show_audio_controls: true

@@ -2,3 +2,6 @@ openai==1.55.3
 pymongo>=4.7
 python-dotenv
 streamlit>=1.40.2
+websockets>=12.0
+pyyaml>=6.0
+asyncio-dgram>=2.1.2
