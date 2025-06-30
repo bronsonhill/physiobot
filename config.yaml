@@ -1,0 +1,54 @@
+audio_settings:
+  voice_type: "alloy"  # OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
+  speech_speed: 1.0    # Range: 0.25 - 4.0
+  conversation_detection:
+    silence_threshold: 2.0  # seconds
+    volume_threshold: 0.1
+  quality_settings:
+    sample_rate: 24000
+    format: "pcm16"
+
+conversation_settings:
+  max_duration: 1800    # 30 minutes
+  auto_save_interval: 300  # 5 minutes
+  connection_timeout: 30
+  max_responses: 50     # Maximum number of responses per conversation
+
+ui_settings:
+  show_live_transcript: true
+  enable_audio_visualization: true
+  theme: "light"
+
+# Multi-cohort settings (Phase 1 preparation)
+cohort_settings:
+  default_cohort_id: "PHYSIO_DEFAULT"
+  enable_multi_cohort: false  # Will be enabled in later phases
+
+# Database settings
+database_settings:
+  database_name: "physiobot-realtime"
+  collections:
+    cohorts: "cohorts"
+    valid_identifiers: "valid_identifiers"
+    audio_transcripts: "audio_transcripts"
+    instructors: "instructors"
+
+# OpenAI Realtime API settings
+openai_realtime:
+  model: "gpt-4o-realtime-preview-2024-10-01"
+  voice: "alloy"
+  input_audio_format: "pcm16"
+  output_audio_format: "pcm16"
+  input_audio_transcription:
+    model: "whisper-1"
+  turn_detection:
+    type: "server_vad"
+    threshold: 0.5
+    prefix_padding_ms: 300
+    silence_duration_ms: 200
+
+# Environment settings
+environment:
+  development: true
+  debug_logging: true
+  log_level: "INFO"
