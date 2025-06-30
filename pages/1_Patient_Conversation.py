@@ -549,7 +549,7 @@ def get_webrtc_html():
             
             <div class="controls">
                 <button id="startButton" class="start-btn">🎙️ Start Conversation</button>
-                <button id="stopButton" class="stop-btn" disabled>⏹️ Stop Conversation</button>
+                <button id="stopButton" class="stop-btn" disabled>⏹️ Pause Conversation</button>
                 <button id="finishButton" class="finish-btn" disabled>✅ Finish & Save</button>
             </div>
             
