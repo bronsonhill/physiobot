@@ -79,6 +79,8 @@ def get_js_code():
             let dataChannel = null;
             let conversationActive = false;
             let conversationSegments = [];
+            let autoScrollEnabled = true;
+            let scrollTimeout = null;
 
             const INITIAL_INSTRUCTIONS = {json.dumps(instructions)};
             const API_KEY = "{api_key}";
@@ -87,6 +89,59 @@ def get_js_code():
             startButton.addEventListener('click', init);
             stopButton.addEventListener('click', stopRecording);
             finishButton.addEventListener('click', finishConversation);
+            
+            // Add scroll event listener for smart scrolling
+            chatContainer.addEventListener('scroll', handleChatScroll);
+            
+            // Scroll handling functions
+            function handleChatScroll() {{
+                const container = chatContainer;
+                const isScrolledToBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+                
+                // Enable auto-scroll when user scrolls to bottom, disable when scrolling up
+                autoScrollEnabled = isScrolledToBottom;
+                
+                // Clear any pending scroll timeout
+                if (scrollTimeout) {{
+                    clearTimeout(scrollTimeout);
+                }}
+                
+                // Show/hide scroll indicator after a delay
+                scrollTimeout = setTimeout(() => {{
+                    updateScrollIndicator();
+                }}, 100);
+            }}
+            
+            function smartScrollToBottom(force = false) {{
+                if (autoScrollEnabled || force) {{
+                    // Small delay to ensure DOM is updated
+                    setTimeout(() => {{
+                        chatContainer.scrollTo({{
+                            top: chatContainer.scrollHeight,
+                            behavior: autoScrollEnabled ? 'smooth' : 'auto'
+                        }});
+                    }}, 10);
+                }}
+            }}
+            
+            function updateScrollIndicator() {{
+                const indicator = document.getElementById('scroll-indicator');
+                if (indicator) {{
+                    if (!autoScrollEnabled && chatContainer.children.length > 1) {{
+                        indicator.style.display = 'block';
+                    }} else {{
+                        indicator.style.display = 'none';
+                    }}
+                }}
+            }}
+            
+            // Make smartScrollToBottom available globally for the button click
+            window.smartScrollToBottom = smartScrollToBottom;
+            
+            // Initialize scroll behavior
+            setTimeout(() => {{
+                updateScrollIndicator();
+            }}, 100);
 
             async function init() {{
                 startButton.disabled = true;
@@ -236,7 +291,7 @@ def get_js_code():
                 currentUserMessage.appendChild(label);
                 currentUserMessage.appendChild(content);
                 chatContainer.appendChild(currentUserMessage);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                smartScrollToBottom();
             }}
 
             function handleUserTranscript(message) {{
@@ -251,7 +306,7 @@ def get_js_code():
                         text: message.transcript
                     }});
                     
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    smartScrollToBottom();
                 }}
             }}
 
@@ -279,7 +334,7 @@ def get_js_code():
                     botMessage.appendChild(label);
                     botMessage.appendChild(content);
                     chatContainer.appendChild(botMessage);
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    smartScrollToBottom();
                     
                     // Add to conversation segments
                     conversationSegments.push({{
@@ -406,30 +461,32 @@ def get_webrtc_html():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Patient Conversation</title>
-        <style>
-            .container {{
-                max-width: 1000px;
-                margin: 0 auto;
-                padding: 20px;
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            }}
-            .controls {{
-                text-align: center;
-                margin: 20px 0;
-                padding: 20px;
-                background-color: #f8f9fa;
-                border-radius: 10px;
-            }}
-            .chat-container {{
-                margin: 20px 0;
-                padding: 20px;
-                border: 2px solid #ddd;
-                border-radius: 10px;
-                min-height: 400px;
-                max-height: 600px;
-                overflow-y: auto;
-                background-color: #ffffff;
-            }}
+                 <style>
+             .container {{
+                 max-width: 1000px;
+                 margin: 0 auto;
+                 padding: 20px;
+                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+             }}
+             .controls {{
+                 text-align: center;
+                 margin: 20px 0;
+                 padding: 20px;
+                 background-color: #f8f9fa;
+                 border-radius: 10px;
+             }}
+             .chat-container {{
+                 margin: 20px 0;
+                 padding: 20px;
+                 border: 2px solid #ddd;
+                 border-radius: 10px;
+                 min-height: 400px;
+                 max-height: 600px;
+                 overflow-y: auto;
+                 background-color: #ffffff;
+                 scroll-behavior: smooth;
+                 position: relative;
+             }}
             .message {{
                 margin: 15px 0;
                 padding: 15px;
@@ -524,13 +581,48 @@ def get_webrtc_html():
                 margin-top: 0;
                 color: #856404;
             }}
-            .instructions ul {{
-                margin: 10px 0;
-                padding-left: 20px;
-            }}
-            .instructions li {{
-                margin: 5px 0;
-            }}
+                         .instructions ul {{
+                 margin: 10px 0;
+                 padding-left: 20px;
+             }}
+             .instructions li {{
+                 margin: 5px 0;
+             }}
+             .scroll-indicator {{
+                 position: relative;
+                 text-align: center;
+                 margin: -10px 0 10px 0;
+                 display: none;
+                 z-index: 10;
+             }}
+             .scroll-to-bottom-btn {{
+                 background: linear-gradient(135deg, #4CAF50, #45a049);
+                 color: white;
+                 border: none;
+                 padding: 8px 16px;
+                 border-radius: 20px;
+                 font-size: 0.9em;
+                 cursor: pointer;
+                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                 transition: all 0.3s ease;
+                 animation: bounce 2s infinite;
+             }}
+             .scroll-to-bottom-btn:hover {{
+                 background: linear-gradient(135deg, #45a049, #4CAF50);
+                 box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                 transform: translateY(-1px);
+             }}
+             @keyframes bounce {{
+                 0%, 20%, 50%, 80%, 100% {{
+                     transform: translateY(0);
+                 }}
+                 40% {{
+                     transform: translateY(-3px);
+                 }}
+                 60% {{
+                     transform: translateY(-2px);
+                 }}
+             }}
         </style>
     </head>
     <body>
@@ -560,6 +652,12 @@ def get_webrtc_html():
                 <div style="text-align: center; color: #666; font-style: italic; margin-top: 100px;">
                     Your conversation transcript will appear here...
                 </div>
+            </div>
+            
+            <div id="scroll-indicator" class="scroll-indicator">
+                <button onclick="smartScrollToBottom(true)" class="scroll-to-bottom-btn">
+                    ↓ New messages below ↓
+                </button>
             </div>
         </div>
         
