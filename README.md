@@ -97,6 +97,13 @@ You'll need:
    - Check your internet connection
    - Make sure students click "Finish Conversation" when done
 
+4. **Audio Conversation Issues**
+   - Ensure you're using HTTPS (required for microphone access)
+   - Check browser permissions for microphone access
+   - Try using Chrome browser for best compatibility
+   - Verify your speakers/headphones are working
+   - Check that your OpenAI API key supports real-time audio features
+
 Need help? Contact technical support at [your contact information]
 
 # Physiotherapy Bot Overview
@@ -115,6 +122,8 @@ This application consists of two main components:
 ## Features
 
 - **AI Patient Simulation**: Interact with a virtual patient presenting with hip pain and various comorbidities
+- **Real-time Audio Conversation**: Have natural voice conversations with the AI patient using real-time audio
+- **Text-based Chat**: Traditional text-based conversation interface
 - **Real-time Feedback**: Get expert supervision on your consultation skills
 - **Communication Assessment**: Evaluation of:
   - Open-ended questioning
@@ -184,12 +193,19 @@ streamlit run Home.py
 
 ## Usage
 
-1. Start with Activity 1 - Patient Consultation
+1. Start with Activity 1 - Patient Consultation (Text-based)
    - Practice taking a patient history
    - Use appropriate communication techniques
    - Gather relevant clinical information
 
-2. Proceed to Activity 2 - Supervisor Feedback
+2. Try Activity 3 - Audio Conversation (Optional)
+   - Have natural voice conversations with the AI patient
+   - Practice verbal communication skills
+   - Experience more realistic patient interactions
+   - Simple, user-friendly interface
+   - Requires microphone access and HTTPS connection
+
+3. Proceed to Activity 2 - Supervisor Feedback
    - Receive detailed feedback on your performance
    - Get suggestions for improvement
    - Review missed key clinical domains

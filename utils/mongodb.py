@@ -43,5 +43,17 @@ def log_transcript(connection_string, conversation_type, messages):
                     "identifier": st.session_state.get("user_identifier", "anonymous")
                 }}
             )
+        
+        elif conversation_type == "patient_audio":
+            # Create new document for audio patient conversation
+            document = {
+                "timestamp": datetime.utcnow(),
+                "patient_audio_messages": messages,
+                "supervisor_messages": [],
+                "identifier": st.session_state.get("user_identifier", "anonymous"),
+                "conversation_type": "audio"
+            }
+            result = collection.insert_one(document)
+            return str(result.inserted_id)
     finally:
         client.close()

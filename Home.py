@@ -55,6 +55,16 @@ def setup():
     if "user_identifier" not in st.session_state:
         st.session_state["user_identifier"] = ""
 
+    # Audio conversation session state variables
+    if "audio_chat_history" not in st.session_state:
+        st.session_state["audio_chat_history"] = []
+
+    if "audio_conversation_finished" not in st.session_state:
+        st.session_state["audio_conversation_finished"] = False
+
+    if "audio_session_id" not in st.session_state:
+        st.session_state["audio_session_id"] = None
+
     # Set up OpenAI API client
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 

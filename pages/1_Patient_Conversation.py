@@ -39,9 +39,9 @@ if prompt := st.chat_input(
             ]
 
             stream = client.chat.completions.create(
-                model = st.session_state["model"],
-                messages = messages_with_system_prompt,
-                stream = True,
+                model=st.session_state["model"],
+                messages=messages_with_system_prompt,
+                stream=True,
             )
             response = st.write_stream(stream)
 
